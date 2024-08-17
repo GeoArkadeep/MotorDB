@@ -663,7 +663,7 @@ class CurveExtractorApp(toga.App):
         database[motor_id] = motor_data
 
         # Save the updated database back to motor_db.json
-        with open('motor_db.json', 'w') as f:
+        with open(database_path, 'w') as f:
             json.dump(database, f, indent=4)
         
         print(f'Motor data for ID {motor_id} saved successfully.')
