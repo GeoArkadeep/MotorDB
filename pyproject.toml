@@ -1,6 +1,6 @@
 # This project was generated with 0.3.17 using template: https://github.com/beeware/briefcase-template@v0.3.17
 [tool.briefcase]
-project_name = "MudmotorWiz"
+project_name = "MotorDB"
 bundle = "in.rocklab.mudmotorwiz"
 version = "0.0.1"
 url = "https://www.rocklab.in/mudmotorwiz"
@@ -15,9 +15,9 @@ long_description = """More details about the app should go here.
 """
 icon = "src/mudmotorwiz/resources/mudmotorwiz"
 sources = [
-    "src/mudmotorwiz",
-    "src/mudmotorwiz/app.py",
-    "src/mudmotorwiz/extract_curves_fitted.py",
+    "src/mmotordb",
+    "src/motordb/app.py",
+    "src/motordb/extract_curves_fitted.py",
 ]
 test_sources = [
     "tests",

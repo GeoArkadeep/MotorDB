@@ -669,7 +669,7 @@ class CurveExtractorApp(toga.App):
         print(f'Motor data for ID {motor_id} saved successfully.')
 
 def main():
-    return CurveExtractorApp('MudmotorWiz', 'in.rocklab.mudmotorwiz')
+    return CurveExtractorApp('MotorDB', 'in.rocklab.motorDB')
 
 if __name__ == '__main__':
     main().main_loop()
