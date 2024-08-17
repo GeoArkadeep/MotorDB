@@ -38,7 +38,7 @@ HTML_CONTENT = """
             flex-direction: column;
             align-items: center;
             width: 100%;
-            box-sizing: border-box; /* Ensures padding is within width */
+            box-sizing: border-box; /* Ensure padding is within width */
         }
 
         #container {
@@ -48,7 +48,7 @@ HTML_CONTENT = """
             flex-direction: column;
             align-items: center;
             padding: 20px;
-            box-sizing: border-box; /* Ensures padding is within width */
+            box-sizing: border-box; /* Ensure padding is within width */
         }
         #imageCanvas { 
             border: 1px solid black;
@@ -62,7 +62,7 @@ HTML_CONTENT = """
             align-items: center;
             width: 100%;
             padding: 0 20px;
-            box-sizing: border-box; /* Ensures padding is within width */
+            box-sizing: border-box; /* Ensure padding is within width */
         }
         .input-group label {
             width: 150px;
@@ -160,7 +160,7 @@ HTML_CONTENT = """
         <button onclick="setMode('minRPMTorque')">Pick Min RPM/Torque</button>
         <button onclick="setMode('maxPressure')">Pick Max Pressure</button>
         <button onclick="setMode('minPressure')">Pick Min Pressure</button>
-        <button onclick="setMode('point')">Pick Point</button>
+        <button onclick="setMode('point')">Pick Torque Point</button>
         <button onclick="setMode('brush1')">Brush Upper Curve</button>
         <button onclick="setMode('brush2')">Brush Lower Curve</button>
         <button onclick="setMode('pickUpperColor')">Pick Upper Curve Color</button>
@@ -569,7 +569,7 @@ class CurveExtractorApp(toga.App):
         print(crop_coords_torque)
         print(lasso_points_upper)
         print(lasso_points_lower)
-        m, c, __ = get_linear_torque_coeffs('temp.png', float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
+        m, c, __ = get_linear_torque_coeffs(temp_image_path, float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
         
         coeffsUpper = extract_curve(
             image_path=temp_image_path,
