@@ -11,6 +11,58 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
 import os
 
+import pint
+
+# Initialize unit registry
+ureg = pint.UnitRegistry()
+
+# Basic force units
+ureg.define('poundforce = 4.448222*N = lbf = LBF')
+ureg.define('kgforce = 9.80665*N = kgf = KGF = kilogramforce')
+
+# Volume units
+ureg.define('barrel = 42*gallon = bbl = BBL')
+ureg.define('thousand_cubic_feet = 1000*feet**3 = MCF')
+ureg.define('million_cubic_feet = 1000000*feet**3 = MMCF')
+
+# Flow rate units
+ureg.define('cubic_meter_per_second = meter**3 / second = cms = CMS')
+ureg.define('cubic_feet_per_minute = feet**3 / min = cfm = CFM')
+ureg.define('cubic_meter_per_minute = meter**3 / minute = cmm = CMM')
+ureg.define('liter_per_second = liter / second = lps = LPS')
+ureg.define('gallon_per_second = gallon / second = gps = GPS')
+ureg.define('gallon_per_minute = gallon / minute = gpm = GPM')
+ureg.define('liters_per_minute = liter / minute = lpm = LPM')
+ureg.define('barrels_per_minute = barrel / minute = bpm = BPM')
+ureg.define('barrels_per_hour = barrel / hour = bph = BPH')
+ureg.define('barrels_per_day = barrel / day = bpd = BPD')
+ureg.define('thousand_cubic_feet_per_day = MCF / day = mcfd = MCFD')
+
+# Pressure units
+ureg.define('pascal = kilogram / (meter * second**2)')
+ureg.define('bar = 100000 * pascal')
+ureg.define('atm = 101325 * pascal')
+ureg.define('pound_per_foot_squared = poundforce / foot**2')
+ureg.define('ksc = kilogramforce / centimetre**2 = KSC')
+ureg.define('pound_per_square_inch = poundforce / inch**2 = psi = PSI')
+ureg.define('kilopascal = 1000 * pascal = kPa = KPA')
+ureg.define('megapascal = 1000000 * pascal = MPa = MPA')
+
+# Torque units
+ureg.define('newton_meter = newton * meter = Nm = NM')
+ureg.define('foot_pound = foot * poundforce = ft_lb = FT_LB')
+ureg.define('kgf_meter = kilogramforce * meter = kgf_m = KGF_M')
+ureg.define('kilonewton_meter = 1000 * newton * meter = kNm = KNM')
+ureg.define('kilojoule = 1000 * joule = kJ = KJ')
+
+# Power units
+ureg.define('horsepower = 745.7 * watt = hp = HP')
+ureg.define('mechanical_horsepower = 745.7 * watt = mhp = MHP')
+ureg.define('metric_horsepower = 735.49875 * watt = PS')
+ureg.define('kilowatt = 1000 * watt = kW = KW')
+ureg.define('megawatt = 1000000 * watt = MW')
+
+
 # Set up directories
 user_home = os.path.expanduser("~/Documents")
 mud_motor_dir = os.path.join(user_home, "mud_motor")
@@ -30,7 +82,8 @@ HTML_CONTENT = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Extract Curves</title>
     <style>
-        body { 
+        body {
+            overflow-x: hidden;
             font-family: Arial, sans-serif;
             font-size: 10px;
             padding: 20px;
@@ -39,6 +92,9 @@ HTML_CONTENT = """
             align-items: center;
             width: 100%;
             box-sizing: border-box; /* Ensure padding is within width */
+        }
+        body::-webkit-scrollbar {
+            display: none;  /* For Chrome, Safari, and Edge */
         }
 
         #container {
@@ -56,6 +112,18 @@ HTML_CONTENT = """
             margin: 10px 0;
             box-sizing: border-box;
         }
+        
+        .input-group2 {
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap to the next line */
+            align-items: center;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box; /* Ensure padding is within width */
+        }
+
+        
         .input-group {
             margin-bottom: 10px; 
             display: flex;
@@ -71,6 +139,7 @@ HTML_CONTENT = """
             box-sizing: border-box;
         }
         .input-group input[type="number"],
+        .input-group input[type="text"],
         .input-group input[type="color"] {
             flex: 1;
             margin-right: 20px;
@@ -120,29 +189,53 @@ HTML_CONTENT = """
     <div style="margin-bottom: 20px;align-items: center;">
         <input type="file" id="imageInput" accept="image/*">
     </div>
+    <div class="input-group2">
+        <button onclick="setMode('minRPMTorque')">Pick Min RPM/Torque</button>
+        <button onclick="setMode('maxTorque')">Pick Max Torque</button>
+        <button onclick="setMode('maxRPM')">Pick Max RPM</button>
+        <button onclick="setMode('maxPressure')">Pick Max Pressure</button>
+        <button onclick="setMode('minPressure')">Pick Min Pressure</button>
+        <button onclick="setMode('point')">Pick Torque Point</button>
+        <button onclick="setMode('brush1')">Brush Upper Curve</button>
+        <button onclick="setMode('brush2')">Brush Lower Curve</button>
+        <button onclick="setMode('pickUpperColor')">Pick Upper Curve Color</button>
+        <button onclick="setMode('pickLowerColor')">Pick Lower Curve Color</button>
+    </div>
     <div class="input-group">
         <label for="maxRPM">Max RPM:</label>
-        <input type="number" id="maxRPM">
+        <input type="number" id="maxRPM", value=150>
         <label for="minRPM">Min RPM:</label>
-        <input type="number" id="minRPM">
+        <input type="number" id="minRPM", value=0>
     </div>
     <div class="input-group">
         <label for="maxTorque">Max Torque:</label>
         <input type="number" id="maxTorque">
         <label for="minTorque">Min Torque:</label>
-        <input type="number" id="minTorque">
+        <input type="number" id="minTorque", value = 0>
     </div>
     <div class="input-group">
         <label for="maxPressure">Max Pressure:</label>
         <input type="number" id="maxPressure">
         <label for="minPressure">Min Pressure:</label>
-        <input type="number" id="minPressure">
+        <input type="number" id="minPressure", value=0>
     </div>
     <div class="input-group">
         <label for="maxFlowRate">Max Flow Rate:</label>
         <input type="number" id="maxFlowRate">
         <label for="minFlowRate">Min Flow Rate:</label>
         <input type="number" id="minFlowRate">
+    </div>
+    <div class="input-group">
+        <label for="flowRateUnit">Flow Rate Unit:</label>
+        <input type="text" id="flowRateUnit" value="GPM">
+        <label for="torqueUnit">Torque Unit:</label>
+        <input type="text" id="torqueUnit" value="ft_lbs">
+    </div>
+    <div class="input-group">
+        <label for="pressureUnit">Pressure Unit:</label>
+        <input type="text" id="pressureUnit" value="psi">
+        <label for="rpmUnit">RPM Unit:</label>
+        <input type="text" id="rpmUnit" value="RPM">
     </div>
     <div class="input-group">
         <label for="upperCurveColor">Upper Curve Color:</label>
@@ -154,19 +247,7 @@ HTML_CONTENT = """
         <span id="lowerCurveColorDisplay" class="color-display"></span>
         <span id="lowerCurveColorText"></span>
     </div>
-    <div>
-        <button onclick="setMode('maxTorque')">Pick Max Torque</button>
-        <button onclick="setMode('maxRPM')">Pick Max RPM</button>
-        <button onclick="setMode('minRPMTorque')">Pick Min RPM/Torque</button>
-        <button onclick="setMode('maxPressure')">Pick Max Pressure</button>
-        <button onclick="setMode('minPressure')">Pick Min Pressure</button>
-        <button onclick="setMode('point')">Pick Torque Point</button>
-        <button onclick="setMode('brush1')">Brush Upper Curve</button>
-        <button onclick="setMode('brush2')">Brush Lower Curve</button>
-        <button onclick="setMode('pickUpperColor')">Pick Upper Curve Color</button>
-        <button onclick="setMode('pickLowerColor')">Pick Lower Curve Color</button>
-        <button onclick="calculate()">Load All</button>
-    </div>
+    
     <pre id="output"></pre>
 
     <script>
@@ -192,6 +273,18 @@ HTML_CONTENT = """
         document.getElementById('imageInput').addEventListener('change', loadImage);
         document.getElementById('upperCurveColor').addEventListener('input', updateUpperCurveColor);
         document.getElementById('lowerCurveColor').addEventListener('input', updateLowerCurveColor);
+        
+        const events = ['input', 'mouseup', 'keydown', 'keyup', 'change'];
+
+        // Select all relevant elements (like inputs, buttons, textareas, etc.)
+        const elements = document.querySelectorAll('input, textarea, button, select');
+
+        elements.forEach(element => {
+            events.forEach(event => {
+                element.addEventListener(event, storeData);
+            });
+        });
+
 
         function loadImage(event) {
             const file = event.target.files[0];
@@ -231,10 +324,21 @@ HTML_CONTENT = """
             }
         }
 
-        function handleMouseMove(e) {
+        function getScaledCoordinates(canvas, event) {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Calculate the scaling factors
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            // Get the coordinates relative to the canvas element
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            
+            return { x, y };
+        }
+
+        function handleMouseMove(e) {
+            const { x, y } = getScaledCoordinates(canvas, e);
 
             redraw();
 
@@ -266,6 +370,7 @@ HTML_CONTENT = """
                 drawCrosshair(x, y, color);
             }
         }
+
         
         function drawCrosshair(x, y, color) {
             ctx.beginPath();
@@ -278,9 +383,7 @@ HTML_CONTENT = """
         }
         
         function handleClick(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const { x, y } = getScaledCoordinates(canvas, e);
 
             if (['maxTorque', 'maxRPM', 'minRPMTorque'].includes(currentMode)) {
                 lines[currentMode] = y;
@@ -303,7 +406,7 @@ HTML_CONTENT = """
 
             redraw();
         }
-
+        
         function updateUpperCurveColor(e) {
             upperCurveColor = e.target.value;
             updateColorDisplay('upperCurveColor', upperCurveColor);
@@ -383,7 +486,11 @@ HTML_CONTENT = """
                 maxFlowRateGPM: document.getElementById('maxFlowRate').value,
                 minFlowRateGPM: document.getElementById('minFlowRate').value,
                 upperCurveColor: upperCurveColor,
-                lowerCurveColor: lowerCurveColor
+                lowerCurveColor: lowerCurveColor,
+                pressureUnits: document.getElementById('pressureUnit').value,
+                torqueUnits: document.getElementById('torqueUnit').value,
+                flowRateUnits: document.getElementById('flowRateUnit').value,
+                rpmUnits: document.getElementById('rpmUnit').value
             };
         }
 
@@ -498,10 +605,10 @@ class CurveExtractorApp(toga.App):
         # Main layout including the Calculate button, input boxes, and WebView
         box = toga.Box(
             children=[
+                self.webview,
                 self.calculate_button,
                 box2,
-                box3,
-                self.webview
+                box3                
             ],
             style=Pack(direction=COLUMN)
         )
@@ -522,91 +629,110 @@ class CurveExtractorApp(toga.App):
         #pass  # We don't need to do anything here for now
 
     async def on_calculate(self, widget):
-        # Get the data stored in the WebView
-        result = await self.webview.evaluate_javascript('getData()')
-        data = json.loads(result)
-        print(data)
-        lines = data['lines']
-        point = data['point']
-        image_base64 = data['imageBase64']
-        image_data = base64.b64decode(image_base64.split(',')[1])
-        image = Image.open(BytesIO(image_data))
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        # Save the image to a temporary file
-        #temp_file_path = 'temp.png'
-        image.save(temp_image_path, format='PNG')
-        
-        max_torque = float(lines['maxTorque'])
-        min_torque = float(lines['minRPMTorque'])
-        max_rpm = float(lines['maxRPM'])
-        min_rpm = float(lines['minRPMTorque'])
-        max_pressure = float(lines['maxPressure'])
-        min_pressure = float(lines['minPressure'])
-        tqscale = (float(data['maxTorqueftlb']) - float(data['minTorqueftlb'])) / (min_torque - max_torque)
-        psiscale = (float(data['maxPressurepsi']) - float(data['minPressurepsi'])) / (max_pressure - min_pressure)
-        
-        torquepoint = [float(point['x']) - min_pressure, float(point['y']) - max_torque]
-        torquepoint[1] = float(data['maxTorqueftlb']) - torquepoint[1] * tqscale
-        torquepoint[0] = torquepoint[0] * psiscale
-        
-        print("picked torque point is: ", torquepoint[1], "ft.lb at ", torquepoint[0], "psi")
-        
-        ucColor = (data['upperCurveColor'])
-        ucColor = [int(x) for x in ucColor[4:-1].split(', ')]
-        lcColor = (data['lowerCurveColor'])
-        lcColor = [int(x) for x in lcColor[4:-1].split(', ')]
-        print(ucColor)
-        # Assemble crop coordinates for torque and RPM
-        crop_coords_torque = [(round(min_pressure), round(max_torque)), 
-                              (round(max_pressure), round(min_torque))]
-        crop_coords_rpm = [(round(min_pressure), round(max_rpm)), 
-                           (round(max_pressure), round(min_rpm))]
-        lasso_points_upper = [(point['x'], point['y']) for point in data['brushPoints']['brush1']]
-        lasso_points_lower = [(point['x'], point['y']) for point in data['brushPoints']['brush2']]
+        try:
+            # Get the data stored in the WebView
+            result = await self.webview.evaluate_javascript('getData()')
+            print(result)
+            data = json.loads(result)
+            #print(data)
+            lines = data['lines']
+            point = data['point']
+            image_base64 = data['imageBase64']
+            image_data = base64.b64decode(image_base64.split(',')[1])
+            image = Image.open(BytesIO(image_data))
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            # Save the image to a temporary file
+            #temp_file_path = 'temp.png'
+            image.save(temp_image_path, format='PNG')
+            pressure_units = data['pressureUnits']
+            torque_units = data['torqueUnits']
+            flowrate_units = data['flowRateUnits']
+            rpm_units = data['rpmUnits']
+            max_torque = float(lines['maxTorque'])
+            min_torque = float(lines['minRPMTorque'])
+            max_rpm = float(lines['maxRPM'])
+            min_rpm = float(lines['minRPMTorque'])
+            max_pressure = float(lines['maxPressure'])
+            min_pressure = float(lines['minPressure'])
+            
+            data['maxFlowRateGPM'] = (float(data['maxFlowRateGPM']) * ureg.parse_expression(data['flowRateUnits'])).to(ureg.gallon / ureg.minute).magnitude
+            data['minFlowRateGPM'] = (float(data['minFlowRateGPM']) * ureg.parse_expression(data['flowRateUnits'])).to(ureg.gallon / ureg.minute).magnitude
+            data['maxPressurepsi'] = (float(data['maxPressurepsi']) * ureg.parse_expression(data['pressureUnits'])).to(ureg.psi).magnitude
+            data['minPressurepsi'] = (float(data['minPressurepsi']) * ureg.parse_expression(data['pressureUnits'])).to(ureg.psi).magnitude
+            data['maxTorqueftlb'] = (float(data['maxTorqueftlb']) * ureg.parse_expression(data['torqueUnits'])).to(ureg.foot * ureg.poundforce).magnitude
+            data['minTorqueftlb'] = (float(data['minTorqueftlb']) * ureg.parse_expression(data['torqueUnits'])).to(ureg.foot * ureg.poundforce).magnitude
+            
+            tqscale = (float(data['maxTorqueftlb']) - float(data['minTorqueftlb'])) / (min_torque - max_torque)
+            psiscale = (float(data['maxPressurepsi']) - float(data['minPressurepsi'])) / (max_pressure - min_pressure)
+            
+            torquepoint = [float(point['x']) - min_pressure, float(point['y']) - max_torque]
+            torquepoint[1] = float(data['maxTorqueftlb']) - torquepoint[1] * tqscale
+            torquepoint[0] = torquepoint[0] * psiscale
+            
+            print("picked torque point is: ", torquepoint[1], "ft.lb at ", torquepoint[0], "psi")
+            
+            ucColor = (data['upperCurveColor'])
+            ucColor = [int(x) for x in ucColor[4:-1].split(', ')]
+            lcColor = (data['lowerCurveColor'])
+            lcColor = [int(x) for x in lcColor[4:-1].split(', ')]
+            print(ucColor)
+            # Assemble crop coordinates for torque and RPM
+            crop_coords_torque = [(round(min_pressure), round(max_torque)), 
+                                  (round(max_pressure), round(min_torque))]
+            crop_coords_rpm = [(round(min_pressure), round(max_rpm)), 
+                               (round(max_pressure), round(min_rpm))]
+            lasso_points_upper = [(point['x'], point['y']) for point in data['brushPoints']['brush1']]
+            lasso_points_lower = [(point['x'], point['y']) for point in data['brushPoints']['brush2']]
 
-        print(crop_coords_rpm)
-        print(crop_coords_torque)
-        print(lasso_points_upper)
-        print(lasso_points_lower)
-        m, c, __ = get_linear_torque_coeffs(temp_image_path, float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
-        
-        coeffsUpper = extract_curve(
-            image_path=temp_image_path,
-            crop_coords=crop_coords_rpm,
-            x_min=float(data['minPressurepsi']),
-            x_max=float(data['maxPressurepsi']),
-            y_min=float(data['minRPMval']),
-            y_max=float(data['maxRPMval']),
-            color_value=ucColor,
-            custom_x_values=[],
-            lasso=lasso_points_upper
-        )
-        coeffsLower = extract_curve(
-            image_path=temp_image_path,
-            crop_coords=crop_coords_rpm,
-            x_min=float(data['minPressurepsi']),
-            x_max=float(data['maxPressurepsi']),
-            y_min=float(data['minRPMval']),
-            y_max=float(data['maxRPMval']),
-            color_value=lcColor,
-            custom_x_values=[],
-            lasso=lasso_points_lower
-        )
-        
-        self.coeffs_list = [coeffsUpper, coeffsLower]
-        self.em = m
-        self.flow_list = [float(data['maxFlowRateGPM']), float(data['minFlowRateGPM'])]
-        self.stallpressure = float(data['maxPressurepsi'])
-        self.overspeed = float(data['maxRPMval'])
-        # Enable the Convert button
-        self.convert_button.enabled = True
-        self.save_button.enabled = True
+            print(crop_coords_rpm)
+            print(crop_coords_torque)
+            print(lasso_points_upper)
+            print(lasso_points_lower)
+            m, c, __ = get_linear_torque_coeffs(temp_image_path, float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
 
+            
+            coeffsUpper = extract_curve(
+                image_path=temp_image_path,
+                crop_coords=crop_coords_rpm,
+                x_min=float(data['minPressurepsi']),
+                x_max=float(data['maxPressurepsi']),
+                y_min=float(data['minRPMval']),
+                y_max=float(data['maxRPMval']),
+                color_value=ucColor,
+                custom_x_values=[],
+                lasso=lasso_points_upper
+            )
+            coeffsLower = extract_curve(
+                image_path=temp_image_path,
+                crop_coords=crop_coords_rpm,
+                x_min=float(data['minPressurepsi']),
+                x_max=float(data['maxPressurepsi']),
+                y_min=float(data['minRPMval']),
+                y_max=float(data['maxRPMval']),
+                color_value=lcColor,
+                custom_x_values=[],
+                lasso=lasso_points_lower
+            )
+            
+            self.coeffs_list = [coeffsUpper, coeffsLower]
+            self.em = m
+            self.flow_list = [float(data['maxFlowRateGPM']), float(data['minFlowRateGPM'])]
+            self.stallpressure = float(data['maxPressurepsi'])
+            self.overspeed = float(data['maxRPMval'])
+            self.torqueunits = data['torqueUnits']
+            self.flowrateunits = data['flowRateUnits']
+            # Enable the Convert button
+            self.convert_button.enabled = True
+            self.save_button.enabled = True
+        except Exception as e:
+            print("Something went wrong, Check values and try again")
+            self.main_window.error_dialog('Error', f"Something went wrong, Check values and try again.\n\n{e}\n\nAre you sure all data is correctly entered?")
+            
     async def on_convert(self, widget):
         try:
-            giventorque = float(self.torque_input.value)
-            givenflow = float(self.flowrate_input.value)
+            giventorque = (float(self.torque_input.value) * ureg.parse_expression(self.torqueunits)).to(ureg.ft_lb).magnitude
+            givenflow = (float(self.flowrate_input.value) * ureg.parse_expression(self.flowrateunits)).to(ureg.gpm).magnitude
             
             if not hasattr(self, 'coeffs_list'):
                 self.result_label.text = 'Error: Please calculate coefficients first.'
