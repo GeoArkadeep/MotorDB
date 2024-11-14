@@ -13,6 +13,10 @@ import os
 
 import pint
 
+import sys
+import logging
+from pathlib import Path
+
 # Initialize unit registry
 ureg = pint.UnitRegistry()
 
@@ -69,6 +73,37 @@ mud_motor_dir = os.path.join(user_home, "mud_motor")
 
 # Create the mud_motor directory if it doesn't exist
 os.makedirs(mud_motor_dir, exist_ok=True)
+log_file = os.path.join(mud_motor_dir, "motordb_log.txt")
+
+if os.path.isfile(log_file):
+    try:
+        os.remove(log_file)
+        print(f"Previous log file deleted: {log_file}")
+    except Exception as e:
+        print(f"Error deleting previous log file: {e}")
+
+logging.basicConfig(filename=str(log_file), level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Create a logger for all console output
+console_logger = logging.getLogger('Console')
+
+# Redirect stdout and stderr
+class StreamToLogger:
+    def __init__(self, logger, log_level):
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ''
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+    def flush(self):
+        pass
+
+sys.stdout = StreamToLogger(console_logger, logging.INFO)
+sys.stderr = StreamToLogger(console_logger, logging.ERROR)
 
 # Define paths for temp image and database file
 temp_image_path = os.path.join(mud_motor_dir, "temp.png")
