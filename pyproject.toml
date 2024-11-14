@@ -24,6 +24,7 @@ test_sources = [
 ]
 
 requires = [
+    "toga",
     "numpy",
     "scipy",
     "matplotlib",
