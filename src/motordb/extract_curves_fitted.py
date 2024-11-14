@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
 
+
 class LassoSelectorHandler:
     def __init__(self, ax, mask):
         self.ax = ax
@@ -72,7 +73,7 @@ def fit_curve(x_data, y_data, degree=5):
     coeffs, _ = curve_fit(lambda x, *p: polynomial(x, *p), x_data, y_data, p0=[1] * (degree + 1))
     return coeffs
 
-def extract_curve(image_path, crop_coords, x_min, x_max, y_min, y_max, color_value=None, custom_x_values=[], lasso=None):
+def extract_curve(image_path, crop_coords, x_min, x_max, y_min, y_max, color_value=None, custom_x_values=[], lasso=None, ):
     img = cv2.imread(image_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
@@ -178,7 +179,7 @@ def extract_curve(image_path, crop_coords, x_min, x_max, y_min, y_max, color_val
         
         # Save to CSV
         csv_path = 'extracted_curve.csv'
-        df.to_csv(csv_path, index=False)
+        #df.to_csv(csv_path, index=False)
         print(f"Coordinates saved to {csv_path}")
         
         # Fit a curve to the data
