@@ -8,7 +8,37 @@ from matplotlib.path import Path
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
+import base64
+from PIL import Image,ImageOps
+from io import BytesIO
 
+def b64toRGB(image_base64):
+    image_data = base64.b64decode(image_base64.split(',')[1])
+    image = Image.open(BytesIO(image_data))
+    image = ImageOps.exif_transpose(image)
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    return image
+
+def RGB2b64(image):
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    return f"data:image/png;base64,{image_base64}"
+
+def debug_cv2(cv2_image, filename="debug_image.png"):
+    cv2.imwrite(filename, cv2_image)  # Save the image as a local file
+    print(f"Image saved as {filename}")
+
+def pil_to_cv2(pil_image):
+    # Convert PIL image to NumPy array
+    cv2_image = np.array(pil_image)
+    #debug_cv2(cv2_image,"before.png")
+    # Convert RGB to BGR (as OpenCV uses BGR format)
+    #cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_RGB2BGR)
+    #debug_cv2(cv2_image,"after.png")
+    return cv2_image
 
 class LassoSelectorHandler:
     def __init__(self, ax, mask):
@@ -73,9 +103,10 @@ def fit_curve(x_data, y_data, degree=5):
     coeffs, _ = curve_fit(lambda x, *p: polynomial(x, *p), x_data, y_data, p0=[1] * (degree + 1))
     return coeffs
 
-def extract_curve(image_path, crop_coords, x_min, x_max, y_min, y_max, color_value=None, custom_x_values=[], lasso=None, ):
-    img = cv2.imread(image_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+def extract_curve(img64, crop_coords, x_min, x_max, y_min, y_max, color_value=None, custom_x_values=[], lasso=None, ):
+    #img = cv2.imread(image_path)
+    img = b64toRGB(img64)
+    img = pil_to_cv2(img)
     
     # Step 1: Crop the image to focus on the area inside the axes
     cropped_img, crop_start, crop_end = interactive_crop(img, crop_coords)
@@ -245,11 +276,11 @@ def interpolate_values(flow_rate, coeffs_list, flow_rates, x_values):
     return calculate_curve(interpolated_coeffs, np.array(x_values, dtype=float))
 
 
-def interpolate_multiple_curves(image_path, flow_rates,x_min, x_max, y_min, y_max, crop_coords=None, color_value=None):    
+def interpolate_multiple_curves(img64, flow_rates,x_min, x_max, y_min, y_max, crop_coords=None, color_value=None):    
     # Extract coefficients for each curve
     coeffs_list = []
     for flow_rate in flow_rates:
-        coeffs = extract_curve(image_path, crop_coords, x_min, x_max, y_min, y_max, color_value)
+        coeffs = extract_curve(img64, crop_coords, x_min, x_max, y_min, y_max, color_value)
         coeffs_list.append(coeffs)
     return coeffs_list
 
@@ -257,9 +288,10 @@ def interpolate_multiple_curves(image_path, flow_rates,x_min, x_max, y_min, y_ma
 def get_interpolated_value(x, flow_rate, coeffs_list, flow_rates):
     return calculate_curve(interpolate_curves(coeffs_list, flow_rate, flow_rates), x)
 
-def rotate_image(image_path, direction='right'):
+def rotate_image(img64, direction='right'):
     # Read the image
-    img = cv2.imread(image_path)
+    img = b64toRGB(img64)#cv2.imread(image_path)
+    img = np.array(img)
     if direction=='right':
         # Rotate the image 90 degrees clockwise
         rotated_img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
@@ -267,11 +299,12 @@ def rotate_image(image_path, direction='right'):
         # Rotate the image 90 degrees clockwise
         rotated_img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
     # Save the rotated image
-    rotated_path = 'rotated_' + image_path
-    cv2.imwrite(rotated_path, rotated_img)
-    return rotated_path
+    #rotated_path = 'rotated_' + image_path
+    #cv2.imwrite(rotated_path, rotated_img)
+    rotated_64 = RGB2b64(rotated_img)
+    return rotated_64
 
-def torque_to_pressure_conversion(image_path, crop_coords=None, x_max=1500, y_max=40000, point=None):
+def torque_to_pressure_conversion(img64, crop_coords=None, x_max=1500, y_max=40000, point=None):
     def on_click(event):
         if event.button == 1:  # Left mouse button
             nonlocal picked_point
@@ -279,7 +312,8 @@ def torque_to_pressure_conversion(image_path, crop_coords=None, x_max=1500, y_ma
             plt.close()
 
     # Read and crop the image
-    img = cv2.imread(image_path)
+    img = b64toRGB(img64)#cv2.imread(image_path)
+    img = np.array(img)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     if crop_coords is None:
@@ -351,8 +385,8 @@ x_min_torque, x_max_torque = 0.0, 40000.0  # Now this is the torque range
 y_min_torque, y_max_torque = 0.0, 1500.0  # Now this is the differential pressure range
 colormeimpressed = [230, 10, 40]
 # Extract torque coefficients
-#rotate_image("Powr-curve-mud-motor.jpg",'right')
-torque_coeffs = extract_curve("Powr-curve-mud-motor.jpg", crop_coords, x_min_torque, x_max_torque, y_min_torque, y_max_torque, colormeimpressed, [0,10000, 20000, 30000,40000])
+#rotate_image("Powr-curve-mud-motor.jpg",'right')#deprecated
+torque_coeffs = extract_curve(rotate_image(<"Powr-curve-mud-motor.jpg">as b_64), crop_coords, x_min_torque, x_max_torque, y_min_torque, y_max_torque, colormeimpressed, [0,10000, 20000, 30000,40000])
 # Calculate differential pressure for given torque values
 torquelist = [10000.0, 20000.0, 30000.0]
 dP_torque = calculate_curve(torque_coeffs, torquelist)

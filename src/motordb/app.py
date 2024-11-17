@@ -246,7 +246,7 @@ class CurveExtractorApp(toga.App):
                 image = image.convert('RGB')
             # Save the image to a temporary file
             #temp_file_path = 'temp.png'
-            image.save(temp_image_path, format='PNG')
+            #image.save(temp_image_path, format='PNG')
             pressure_units = data['pressureUnits']
             torque_units = data['torqueUnits']
             flowrate_units = data['flowRateUnits']
@@ -291,11 +291,11 @@ class CurveExtractorApp(toga.App):
             print(crop_coords_torque)
             print(lasso_points_upper)
             print(lasso_points_lower)
-            m, c, __ = get_linear_torque_coeffs(temp_image_path, float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
+            m, c, __ = get_linear_torque_coeffs(image_base64, float(data['maxTorqueftlb']), float(data['maxPressurepsi']), crop_coords_torque, torquepoint)
 
             
             coeffsUpper = extract_curve(
-                image_path=temp_image_path,
+                img64=image_base64,
                 crop_coords=crop_coords_rpm,
                 x_min=float(data['minPressurepsi']),
                 x_max=float(data['maxPressurepsi']),
@@ -306,7 +306,7 @@ class CurveExtractorApp(toga.App):
                 lasso=lasso_points_upper
             )
             coeffsLower = extract_curve(
-                image_path=temp_image_path,
+                img64=image_base64,
                 crop_coords=crop_coords_rpm,
                 x_min=float(data['minPressurepsi']),
                 x_max=float(data['maxPressurepsi']),
